@@ -1,0 +1,403 @@
+/* Resetowanie stylów */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Główne style */
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #2c2f33; /* Ciemne tło */
+    color: #d1d5db; /* Jasny tekst */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+/* Kontener główny */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    background-color: #40444b; /* Jasno-ciemny odcień */
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+/* Nagłówek */
+header {
+    background-color: #23272a;
+    color: #ffffff;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #555;
+}
+
+header h1 {
+    font-size: 1.5rem;
+}
+
+.auth-buttons button {
+    background-color: #4CAF50; /* Zielony przycisk */
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-left: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.auth-buttons button:hover {
+    background-color: #388e3c;
+}
+
+/* Informacje o saldzie */
+.profile-info aside {
+    background-color: #2c2f33; /* Ciemniejsze tło */
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1.5rem 2rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-info p {
+    font-size: 1rem;
+    color: #ffffff;
+}
+
+/* Główna sekcja */
+main {
+    padding: 2rem;
+}
+
+/* Informacje o usłudze */
+.service-info {
+    margin-bottom: 2rem;
+}
+
+.service-info h2 {
+    font-size: 1.5rem;
+    color: #ffffff;
+    margin-bottom: 1rem;
+}
+
+.service-info p {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.service-info strong {
+    color: #ffffff;
+}
+
+/* Formularz rezerwacji */
+.reservation-form {
+    background-color: #2c2f33; /* Ciemniejsze tło */
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.reservation-form h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.reservation-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #d1d5db;
+}
+
+.reservation-form input {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    border: 1px solid #555;
+    border-radius: 5px;
+    background-color: #23272a;
+    color: #ffffff;
+}
+
+.reservation-form input:focus {
+    outline: none;
+    border-color: #7289da;
+}
+
+.reservation-form .btn {
+    background-color: #4CAF50;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.reservation-form .btn:hover {
+    background-color: #388e3c;
+}
+
+/* Sekcja z opiniami */
+.reviews {
+    margin-top: 2rem;
+    padding: 2rem;
+    background-color: #2c2f33; /* Ciemniejsze tło */
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Nagłówek sekcji */
+.reviews h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #ffffff; /* Jasny tekst */
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #444;
+    padding-bottom: 0.5rem;
+}
+
+/* Opinie użytkowników */
+.review {
+    background-color: #23272a; /* Ciemne tło dla opinii */
+    border-radius: 8px;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #444;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.review p {
+    margin: 0.5rem 0;
+    font-size: 1rem;
+    color: #d1d5db; /* Jaśniejszy tekst */
+}
+
+/* Tytuł użytkownika */
+.review strong {
+    font-weight: bold;
+    color: #ffffff;
+}
+
+/* Ocena */
+.review .rating {
+    font-size: 1.2rem;
+    color: #FFD700; /* Złota ocena */
+}
+
+/* Formularz dodawania opinii */
+.reviews form {
+    background-color: #23272a; /* Ciemne tło */
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    margin-top: 2rem;
+}
+
+.reviews form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.reviews form label {
+    font-size: 1.1rem;
+    color: #ffffff; /* Jasny tekst */
+    font-weight: 500;
+}
+
+.reviews form select,
+.reviews form textarea {
+    width: 100%;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #555;
+    font-size: 1rem;
+    background-color: #2c2f33;
+    color: #d1d5db;
+    transition: border-color 0.3s ease;
+}
+
+.reviews form select:focus,
+.reviews form textarea:focus {
+    border-color: #7289da;
+    outline: none;
+}
+
+.reviews form textarea {
+    resize: vertical;
+}
+
+.reviews form button {
+    background-color: #4CAF50; /* Zielony przycisk */
+    color: #ffffff;
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.reviews form button:hover {
+    background-color: #388e3c;
+}
+
+/* Komunikat dla niezalogowanych użytkowników */
+.reviews p {
+    font-size: 1rem;
+    color: #d1d5db; /* Jaśniejszy tekst */
+    margin-top: 1rem;
+}
+
+/* Przycisk usunięcia opinii */
+.btn.danger {
+    background-color: #e3342f;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.btn.danger:hover {
+    background-color: #cc1f1a;
+}
+.message {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.message-container {
+    margin-top: 1rem;
+}
+
+.message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    padding: 0.8rem;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    text-align: center;
+}
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.btn.danger {
+    background-color: #e3342f;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.btn.danger:hover {
+    background-color: #cc1f1a;
+}
+/* Sekcja opcji usługi */
+.service-options {
+    background-color: #2c2f33; /* Ciemniejsze tło */
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.service-options h3 {
+    font-size: 1.5rem;
+    color: #ffffff;
+    margin-bottom: 1rem;
+}
+
+.service-options .form-group {
+    margin-bottom: 1rem;
+}
+
+.service-options label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #d1d5db;
+}
+
+.service-options select,
+.service-options input[type="date"] {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    border: 1px solid #555;
+    border-radius: 5px;
+    background-color: #23272a;
+    color: #ffffff;
+    font-size: 1rem;
+}
+
+.service-options select:focus,
+.service-options input[type="date"]:focus {
+    outline: none;
+    border-color: #7289da;
+}
+
+.service-options .btn {
+    background-color: #4CAF50; /* Zielony przycisk */
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.service-options .btn:hover {
+    background-color: #388e3c;
+}
+/* Kalendarz - z ikoną po prawej stronie i placeholderem */
+.service-options input[type="date"],
+.service-options input[type="text"] {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    border: 1px solid #555;
+    border-radius: 5px;
+    background-color: #23272a;
+    color: #ffffff;
+    font-size: 1rem;
+    position: relative;
+    padding-right: 2.5rem; /* Miejsce na ikonę kalendarza */
+}
+
+/* Ustawienie placeholdera */
+.service-options input[type="text"]::placeholder {
+    color: #fff;
+    font-style: italic;
+    opacity: 1; /* Upewnij się, że placeholder nie jest przezroczysty */
+}
+/* Styl dla niedostępnych dat */
+.disabled-date {
+    background-color: #ddd !important; /* Szary kolor tła dla niedostępnych dat */
+    color: #bbb !important; /* Szary kolor tekstu */
+    pointer-events: none; /* Wyłącza możliwość klikania na te dni */
+}
+.flatpickr-day.flatpickr-disabled {
+    color: #d3d3d3; /* Szary kolor */
+    cursor: not-allowed; /* Ikona blokady */
+    background-color: #f9f9f9; /* Jasne tło */
+}

@@ -1,0 +1,53 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrahead %}
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/finance_summary.css' %}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 d-flex flex-column align-items-center">
+    <!-- Nagłówek -->
+    <h1 class="display-4 text-center mb-4">Podsumowanie Danych</h1>
+
+    <!-- Tabela z danymi -->
+    <div class="card shadow-lg" style="max-width: 600px; width: 100%;">
+        <div class="card-header bg-primary text-white text-center">
+            <h4 class="mb-0">Podsumowanie Danych</h4>
+        </div>
+        <div class="card-body p-4">
+            <table class="table table-bordered table-hover text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3">Liczba Rezerwacji</th>
+                        <th class="py-3">Liczba Opinii</th>
+                        <th class="py-3">Przychód (PLN)</th>
+                        <th class="py-3">Liczba Użytkowników</th>
+                        <th class="py-3">Najpopularniejsza Usługa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="py-3 font-weight-bold">{{ total_reservations }}</td>
+                        <td class="py-3 font-weight-bold">{{ total_reviews }}</td>
+                        <td class="py-3 font-weight-bold">{{ total_revenue|floatformat:2 }}</td>
+                        <td class="py-3 font-weight-bold">{{ total_users }}</td>
+                        <td class="py-3 font-weight-bold">
+                            {{ most_popular_service }} ({{ most_popular_service_count }} rezerwacji)
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer text-center">
+            <a href="export-csv/" class="btn btn-primary btn-lg mx-2">
+                <i class="fas fa-file-csv"></i> Eksportuj do CSV
+            </a>
+            <a href="export-pdf/" class="btn btn-secondary btn-lg mx-2">
+                <i class="fas fa-file-pdf"></i> Eksportuj do PDF
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

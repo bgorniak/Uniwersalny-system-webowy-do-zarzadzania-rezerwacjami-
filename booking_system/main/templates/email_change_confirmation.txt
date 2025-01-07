@@ -1,0 +1,11 @@
+Cześć {{ user.first_name }},
+
+Otrzymaliśmy prośbę o zmianę adresu e-mail na: {{ new_email }}.
+
+Aby potwierdzić, kliknij poniższy link:
+http://localhost:8000/email-change-confirm/{{ uid }}/{{ token }}/?email={{ new_email }}
+
+Jeśli nie prosiłeś o zmianę adresu, zignoruj tę wiadomość.
+
+Pozdrawiamy,
+Zespół Rezerwacji

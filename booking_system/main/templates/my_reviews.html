@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dodane opinie</title>
+    <link rel="stylesheet" href="{% static 'css/my_reviews.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button onclick="window.location.href='/profile/'" class="back-button">Wróć</button>
+            <h1>Dodane opinie</h1>
+        </header>
+
+        <main>
+    {% if reviews %}
+        <div class="review-list">
+            {% for review in reviews %}
+                <div class="review-item">
+                    <p><strong>Usługa:</strong> {{ review.service.name }}</p>
+                    <p><strong>Ocena:</strong> {{ review.rating }}</p>
+                    <p><strong>Opinia:</strong> {{ review.comment }}</p>
+                    <form method="POST" action="{% url 'delete_review' review.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="redirect_to" value="my_reviews">
+    <button type="submit" class="btn danger">Usuń opinię</button>
+</form>
+                </div>
+                <hr>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="no-reviews">Brak opinii.</p>
+    {% endif %}
+</main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontakt z administracją</title>
+    <link rel="stylesheet" href="{% static 'css/contact_admin.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button onclick="window.location.href='/profile/'">Wróć</button>
+            <h1>Kontakt z administracją</h1>
+        </header>
+
+        <main>
+           <section class="contact-form">
+    <p>Masz pytanie lub problem? Skontaktuj się z administracją, wypełniając poniższy formularz.</p>
+    <form method="POST">
+        {% csrf_token %}
+        <label for="subject">Temat:</label>
+        <input type="text" id="subject" name="subject" placeholder="Wprowadź temat wiadomości" required>
+
+        <label for="message">Wiadomość:</label>
+        <textarea id="message" name="message" placeholder="Wprowadź treść wiadomości" rows="6" required></textarea>
+
+        {% if success_message %}
+            <p class="success-message">{{ success_message }}</p>
+        {% endif %}
+
+        <button type="submit">Wyślij wiadomość</button>
+    </form>
+</section>
+        </main>
+    </div>
+</body>
+</html>

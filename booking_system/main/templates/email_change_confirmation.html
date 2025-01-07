@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Potwierdzenie zmiany adresu e-mail</title>
+</head>
+<body>
+    <p>Cześć {{ user.first_name }},</p>
+    <p>Otrzymaliśmy prośbę o zmianę adresu e-mail na: <strong>{{ new_email }}</strong>.</p>
+    <p>Aby potwierdzić, kliknij poniższy przycisk:</p>
+    <p>
+        <a href="http://localhost:8000/email-change-confirm/{{ uid }}/{{ token }}/?email={{ new_email }}"
+           style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">
+           Potwierdź zmianę
+        </a>
+    </p>
+    <p>Jeśli nie prosiłeś o zmianę adresu, zignoruj tę wiadomość.</p>
+    <p>Pozdrawiamy,<br>Zespół Rezerwacji</p>
+</body>
+</html>

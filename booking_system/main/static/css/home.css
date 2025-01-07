@@ -1,0 +1,236 @@
+/* Plik: home.css */
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #2c2f33; /* Ciemny, ale nie czarny */
+    color: #d1d5db; /* Jasny tekst */
+}
+
+header {
+    background-color: #23272a; /* Trochę ciemniejszy od tła */
+    color: #ffffff;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+header .logo h1 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+header .auth-buttons button {
+    background-color: #7289da; /* Kolor akcentu */
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.5rem 1rem;
+    margin-left: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+header .auth-buttons button:hover {
+    background-color: #5b6eae;
+}
+
+/* Kontener ogólny */
+.container {
+    display: flex; /* Flexbox dla poziomego układu */
+    gap: 2rem; /* Odstęp między sekcjami */
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+
+
+/* Sekcja filtrów */
+aside.filter {
+    background-color: #40444b; /* Ten sam kolor tła */
+    border-radius: 8px;
+    padding: 1.5rem;
+    width: 300px; /* Stała szerokość dla filtrów */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+aside.filter h3 {
+    margin-top: 0;
+    color: #ffffff;
+}
+
+aside.filter label {
+    display: block;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #d1d5db;
+}
+
+aside.filter select,
+aside.filter input {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: none;
+    background-color: #2c2f33;
+    color: #ffffff;
+}
+
+aside.filter button {
+    width: 100%;
+    background-color: #7289da;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.5rem 1rem;
+    margin-top: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+aside.filter button:hover {
+    background-color: #5b6eae;
+}
+
+main.service-list {
+    flex: 3;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+/* Wrapper dla listy usług */
+.service-wrapper {
+    background-color: #40444b; /* Ten sam kolor tła */
+    border-radius: 8px;
+    flex: 1; /* Zajmuje pozostałą przestrzeń */
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+
+/* Lista usług */
+.service-list {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* 5 usług w jednym rzędzie */
+    gap: 1.5rem;
+}
+
+/* Styl dla pojedynczej usługi */
+.service-item {
+    background-color: #2c2f33; /* Ciemniejsze tło usług */
+    border: 1px solid #555555; /* Delikatne obramowanie */
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Stylizacja po najechaniu */
+.service-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+/* Typografia dla usługi */
+.service-item h3 {
+    font-size: 1.2rem;
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+}
+
+.service-item p {
+    color: #d1d5db;
+    margin: 0.3rem 0;
+}
+/* Przyciski */
+.service-item button {
+    background-color: #4CAF50; /* Zielony akcent */
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.5rem 1rem;
+    margin-top: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+/* Przyciski po najechaniu */
+.service-item button:hover {
+    background-color: #388e3c;
+}
+.notification {
+    background-color: #ffcc00;
+    color: #2c2f33;
+    padding: 1rem;
+    text-align: center;
+    margin: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Stylizacja sekcji statusu serwisu */
+.service-status-notification {
+    background-color: #40444b;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    color: #fff;
+    position: fixed;  /* Przykleja na dole strony */
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 1000;  /* Upewnij się, że jest na wierzchu */
+    text-align: center; /* Wyśrodkowanie tekstu */
+}
+
+.service-status-notification h2 {
+    margin-top: 0;
+}
+
+.service-status-notification p {
+    font-size: 1.1em;
+}
+
+
+/* Responsywność */
+@media (max-width: 768px) {
+    /* Przy mniejszych ekranach zmieniamy układ na pojedynczą kolumnę */
+    .service-list {
+        grid-template-columns: 1fr; /* Wszystko w jednej kolumnie */
+    }
+
+    /* Dla większych ekranów */
+    .container {
+        flex-direction: column;
+    }
+
+    aside.filter {
+        max-width: 100%;
+    }
+    .service-status-notification {
+        padding: 15px;  /* Mniejsze paddingi na mniejszych ekranach */
+        font-size: 1rem; /* Zmniejszenie rozmiaru czcionki */
+    }
+
+    .service-status-notification h2 {
+        font-size: 1.2rem; /* Dostosowanie rozmiaru nagłówka */
+    }
+
+    .service-status-notification p {
+        font-size: 0.9rem; /* Zmniejszenie rozmiaru tekstu */
+    }
+
+}
+@media (min-width: 769px) {
+    .service-status-notification {
+        position: absolute;  /* Zmienia pozycję na większych ekranach */
+        bottom: 20px;  /* Ustawienie z dołu */
+        left: 0;
+        width: 100%;
+        padding: 20px;
+        z-index: 10; /* Ustawić na mniejszy z-index, jeśli nie jest potrzebny na wierzchu */
+    }
+}

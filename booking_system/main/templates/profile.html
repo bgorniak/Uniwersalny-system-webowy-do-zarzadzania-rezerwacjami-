@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil</title>
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="back-btn" onclick="window.location.href='/'">Wróć</button>
+            <h1>Profil</h1>
+            <button class="logout-btn" onclick="window.location.href='/logout/'">Wyloguj</button>
+        </header>
+
+        <div class="profile-container">
+            <aside class="profile-sidebar">
+                <button onclick="window.location.href='/profile/data/'">Ustawienia</button>
+                <button onclick="window.location.href='/profile/reservations/'">Moje rezerwacje</button>
+                <button onclick="window.location.href='/profile/reviews/'">Dodane opinie</button>
+                <button onclick="window.location.href='/profile/contact/'">Kontakt z administracją</button>
+                <button onclick="window.location.href='/profile/messages/'">Moje wiadomości</button>
+            </aside>
+
+            <main class="profile-main">
+                <h2>Dane użytkownika:</h2>
+                <div class="user-info">
+                    <p><strong>Imię:</strong> {{ user.first_name }}</p>
+                    <p><strong>Nazwisko:</strong> {{ user.last_name }}</p>
+                    <p><strong>Adres E-mail:</strong> {{ user.email }}</p>
+                    <p><strong>Saldo:</strong> {{ user.balance }} punktów</p>
+                    <p>Saldo jest zwiększane w tedy gdy:
+                        <br>- Rejestracja 2000 punktów
+                        <br>- Codzienne logowanie 1500 punktów
+                        <br>- Dodana opinia 1000 punktów
+                    </p>
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje dane</title>
+    <link rel="stylesheet" href="{% static 'css/user_data.css' %}">
+</head>
+<body>
+    <div class="container">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <header>
+            <button class="btn-back" onclick="window.location.href='/profile/'">Wróć</button>
+            <h1>Ustawienia</h1>
+        </header>
+
+        <main>
+        <section class="section">
+    <h2>Twoje dane</h2>
+    <form method="POST" action="{% url 'user_data' %}" class="form">
+        {% csrf_token %}
+        {{ user_form.as_p }}
+        {% if profile_message %}
+        <div class="message success">{{ profile_message }}</div>
+        {% endif %}
+        <button type="submit" name="update_profile" class="btn-primary">Zmień dane</button>
+    </form>
+</section>
+
+<section class="section">
+    <h2>Zmień adres e-mail</h2>
+    <form method="POST" action="{% url 'user_data' %}" class="form">
+        {% csrf_token %}
+        {{ email_form.as_p }}
+        {% if email_message %}
+        <div class="message success">{{ email_message }}</div>
+        {% endif %}
+        <button type="submit" name="update_email" class="btn-primary">Zmień adres e-mail</button>
+    </form>
+</section>
+
+<section class="section">
+    <h2>Zmień hasło</h2>
+    <form method="POST" action="{% url 'user_data' %}" class="form">
+        {% csrf_token %}
+        {{ password_form.as_p }}
+        {% if password_success %}
+        <div class="message success">{{ password_success }}</div>
+        {% elif password_errors %}
+        <div class="message error">
+            <strong>Nie udało się zmienić hasła. Powody:</strong>
+            <ul>
+                {% for error in password_errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <button type="submit" name="update_password" class="btn-primary">Zmień hasło</button>
+    </form>
+</section>
+
+            <!-- Sekcja usuwania konta -->
+            <section class="section danger">
+                <h2>Usuń konto</h2>
+                <p>Jeśli chcesz usunąć swoje konto, kliknij przycisk poniżej. Ta operacja jest nieodwracalna.</p>
+                <form method="POST" action="{% url 'delete_account' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-danger" onclick="return confirmDelete()">Usuń konto</button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        function confirmDelete() {
+            return confirm("Czy na pewno chcesz usunąć swoje konto? Ta operacja jest nieodwracalna.");
+        }
+    </script>
+</body>
+</html>

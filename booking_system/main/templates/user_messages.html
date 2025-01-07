@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje wiadomości</title>
+    <link rel="stylesheet" href="{% static 'css/user_messages.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="btn-back" onclick="window.location.href='/profile/'">Wróć</button>
+            <h1>Moje wiadomości</h1>
+        </header>
+
+        <main>
+            <section>
+                <h2>Twoje wiadomości</h2>
+                {% if messages %}
+                    <ul class="messages-list">
+                        {% for message in messages %}
+                            <li class="message-item">
+                                <h3>{{ message.subject }}</h3>
+                                <p><strong>Treść:</strong> {{ message.content }}</p>
+                                <p><strong>Data wysłania:</strong> {{ message.created_at|date:"d-m-Y H:i" }}</p>
+
+                                {% if message.sender == 'admin' %}
+                                    <!-- Informacje dodatkowe tylko dla wiadomości od administratora -->
+                                    <p><strong>Nazwa usługi:</strong>
+                                        {% if message.reservations.exists %}
+                                            {{ message.reservations.first.service_name }}
+                                        {% else %}
+                                            Brak danych
+                                        {% endif %}
+                                    </p>
+                                    <p><strong>Opcja:</strong>
+                                        {% if message.reservations.exists %}
+                                            {{ message.reservations.first.option.name }}
+                                        {% else %}
+                                            Brak danych
+                                        {% endif %}
+                                    </p>
+                                {% elif message.sender == 'user' %}
+                                    <!-- Odpowiedź administratora tylko dla wiadomości od użytkownika -->
+                                    {% if message.response %}
+                                        <div class="response">
+                                            <p><strong>Odpowiedź administratora:</strong> {{ message.response }}</p>
+                                            <p><strong>Data odpowiedzi:</strong> {{ message.response_date|date:"d-m-Y H:i" }}</p>
+                                        </div>
+                                    {% else %}
+                                        <p><strong>Odpowiedź administratora:</strong> Oczekuje na odpowiedź.</p>
+                                    {% endif %}
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Nie masz jeszcze żadnych wiadomości.</p>
+                {% endif %}
+            </section>
+        </main>
+    </div>
+</body>
+</html>

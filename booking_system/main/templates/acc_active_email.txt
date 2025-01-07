@@ -1,0 +1,7 @@
+Witaj {{ user.first_name }},
+
+Dziękujemy za rejestrację!
+
+Aby aktywować swoje konto, skopiuj poniższy link i wklej w przeglądarce:
+
+http://localhost:8000/activate/{{ uid }}/{{ token }}/

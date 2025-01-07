@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detal Usługi</title>
+    <link rel="stylesheet" href="{% static 'css/service_detail.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="auth-buttons">
+                <button class="back-btn" onclick="window.location.href='/'">Wróć</button>
+                </div>
+            <h1>Uniwersalny System Webowy Do Zarządzania Rezerwacjami</h1>
+            <div class="auth-buttons">
+                {% if request.user.is_authenticated %}
+                    <button class="logout-btn" onclick="window.location.href='{% url 'logout' %}'">Wyloguj</button>
+                {% else %}
+                    <button class="auth-btn" onclick="window.location.href='{% url 'register' %}'">Rejestracja</button>
+                    <button class="auth-btn" onclick="window.location.href='{% url 'login' %}'">Logowanie</button>
+                {% endif %}
+            </div>
+
+        </header>
+
+         <div class="profile-info">
+            <aside>
+                <h3>Saldo:</h3>
+                {% if request.user.is_authenticated %}
+                    <p>{{ request.user.first_name }} {{ request.user.last_name }} - {{ request.user.balance }} zł</p>
+                {% else %}
+                    <p>Zaloguj się, aby zobaczyć swoje saldo.</p>
+                {% endif %}
+            </aside>
+        </div>
+
+      {% if messages %}
+<div class="messages">
+    {% for message in messages %}
+    <div class="message {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+        <main>
+            <section class="service-info">
+                <h2>Informacje o usłudze</h2>
+                <h1>{{ service.name }}</h1>
+                <p><strong>Lokalizacja:</strong> {{ service.location }}</p>
+                 <p><strong>Cena od:</strong>
+    {% if service.get_min_price %}
+        {{ service.get_min_price }} zł
+        {% if service.type == "Hotel" %}
+            / za noc
+        {% endif %}
+    {% else %}
+        Brak dostępnych cen
+    {% endif %}
+</p>
+                <p><strong>Opis:</strong> {{ service.description }}</p>
+            </section>
+
+            <section class="service-options">
+                <h3>Opcje dla {{ service.name }}</h3>
+                {% if options %}
+                    <form method="POST" action="{% url 'make_reservation' service.id %}">
+                        {% csrf_token %}
+
+                        <!-- Zawsze widoczny dropdown z opcjami -->
+                        <div class="form-group">
+                            <label for="option">Wybierz opcję:</label>
+                    <select id="option" name="option" required>
+    {% for option in options %}
+        <option
+    value="{{ option.id }}"
+    data-available-from="{% for avail in availability %}{% if avail.option_id == option.id %}{{ avail.available_from }}{% endif %}{% endfor %}"
+    data-available-to="{% for avail in availability %}{% if avail.option_id == option.id %}{{ avail.available_to }}{% endif %}{% endfor %}"
+    data-type="{{ service.type }}"
+    {% if forloop.first %}selected{% endif %}>
+    {{ option.name }} (dla {{ option.capacity }} osób)
+    {% for avail in availability %}
+        {% if avail.option_id == option.id %}
+            (dostępność: {{ avail.available_from|date:"d.m.Y" }} - {{ avail.available_to|date:"d.m.Y" }})
+        {% endif %}
+    {% endfor %}
+    - {{ option.price }} zł
+</option>
+    {% endfor %}
+</select>
+                        </div>
+
+                        {% if request.user.is_authenticated %}
+                            <!-- Pola formularza widoczne tylko dla zalogowanych użytkowników -->
+                            <div class="form-group hotel-dates" style="display: none;">
+                                <label for="start_date">Data zameldowania:</label>
+                                <input type="date" id="start_date" name="start_date" min="{{ today }}" placeholder="dd.mm.rrrr">
+
+                                <label for="end_date">Data wymeldowania:</label>
+                                <input type="date" id="end_date" name="end_date" min="{{ today }}" placeholder="dd.mm.rrrr">
+                            </div>
+                            <div class="form-group single-date" style="display: none;">
+                                <label for="date">Data rezerwacji:</label>
+                                <input type="date" id="date" name="date" min="{{ today }}" placeholder="dd.mm.rrrr">
+                            </div>
+                            <div class="form-group single-datetime" style="display: none;">
+                                <label for="datetime">Data i godzina rezerwacji:</label>
+                                <input type="datetime-local" id="datetime" name="datetime" min="{{ today }}" placeholder="dd.mm.yyyy HH:mm">
+                            </div>
+
+
+
+
+                            <!-- Przycisk rezerwacji widoczny tylko dla zalogowanych użytkowników -->
+                            <button type="submit" class="btn">Zarezerwuj</button>
+                        {% else %}
+                            <!-- Informacja dla niezalogowanych użytkowników -->
+                            <div class="messages">
+                                <p>Zaloguj się, aby dokonać rezerwacji.</p>
+                            </div>
+                        {% endif %}
+                    </form>
+                {% else %}
+                    <p>Brak dostępnych opcji dla tej usługi.</p>
+                {% endif %}
+            </section>
+
+            <section class="reviews">
+    <h2>Opinie</h2>
+    <div>
+        {% if reviews %}
+            {% for review in reviews %}
+                <div class="review">
+                    <p><strong>{{ review.user.first_name }}:</strong> {{ review.comment }}</p>
+                    <p><strong>Ocena:</strong> {{ review.rating }}/5</p>
+                    {% if review.user == request.user %}
+                        <form method="POST" action="{% url 'delete_review' review.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="redirect_to" value="service_detail">
+                            <button type="submit" class="btn danger">Usuń opinię</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Brak opinii dla tej usługi.</p>
+        {% endif %}
+    </div>
+
+    {% if request.user.is_authenticated %}
+        <form method="POST" action="{% url 'add_review' service.id %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="rating">Ocena:</label>
+                <select id="rating" name="rating" class="form-control" required>
+                    <option value="">Wybierz ocenę</option>
+                    {% for i in "12345" %}
+                        <option value="{{ forloop.counter }}">{{ forloop.counter }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="comment">Opinia:</label>
+                <textarea id="comment" name="comment" class="form-control" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Dodaj opinię</button>
+        </form>
+    {% else %}
+        <p>Zaloguj się, aby dodać opinię.</p>
+    {% endif %}
+</section>
+
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+     document.addEventListener("DOMContentLoaded", function () {
+    const optionSelect = document.getElementById('option');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const dateInput = document.getElementById('date');
+    const datetimeInput = document.getElementById('datetime');
+
+    const hotelDates = document.querySelector('.hotel-dates');
+    const singleDate = document.querySelector('.single-date');
+    const singleDatetime = document.querySelector('.single-datetime');
+    const today = new Date().toISOString().split("T")[0]; // Bieżąca data w formacie ISO
+
+    function updateDateRange() {
+    if (!optionSelect) return;
+
+    const selectedOption = optionSelect.options[optionSelect.selectedIndex];
+    const availableFrom = selectedOption.getAttribute('data-available-from');
+    const availableTo = selectedOption.getAttribute('data-available-to');
+
+    console.log(`Selected Option: ${selectedOption.value}, Available From: ${availableFrom}, Available To: ${availableTo}`);
+
+    // Aktualizacja Flatpickr
+    if (startDateInput) {
+        flatpickr(startDateInput, {
+            dateFormat: "Y-m-d",
+            minDate: availableFrom || today,
+            maxDate: availableTo || null,
+            disableMobile: true,
+        });
+    }
+
+    if (endDateInput) {
+        flatpickr(endDateInput, {
+            dateFormat: "Y-m-d",
+            minDate: availableFrom || today,
+            maxDate: availableTo || null,
+            disableMobile: true,
+        });
+    }
+
+    if (dateInput) {
+        flatpickr(dateInput, {
+            dateFormat: "Y-m-d",
+            minDate: availableFrom || today,
+            maxDate: availableTo || null,
+            disableMobile: true,
+        });
+    }
+
+    if (datetimeInput) {
+        flatpickr(datetimeInput, {
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
+            minDate: availableFrom || today,
+            maxDate: availableTo || null,
+            disableMobile: true,
+        });
+    }
+}
+
+    // Funkcja aktualizująca widoczność pól na podstawie wybranej opcji
+    function updateForm() {
+        if (!optionSelect) return;
+
+        const selectedOption = optionSelect.options[optionSelect.selectedIndex];
+        const type = selectedOption.getAttribute('data-type');
+
+        // Resetowanie wyświetlania
+        hotelDates.style.display = 'none';
+        singleDate.style.display = 'none';
+        singleDatetime.style.display = 'none';
+
+        // Ustawianie wymagań na podstawie typu usługi
+        if (startDateInput) startDateInput.required = false;
+        if (endDateInput) endDateInput.required = false;
+        if (dateInput) dateInput.required = false;
+        if (datetimeInput) datetimeInput.required = false;
+
+        if (type === 'Hotel') {
+            if (hotelDates) {
+                hotelDates.style.display = 'block';
+                if (startDateInput) startDateInput.required = true;
+                if (endDateInput) endDateInput.required = true;
+            }
+        } else if (type === 'Restauracja' || type === 'SPA&WELLNESS') {
+            if (singleDatetime) {
+                singleDatetime.style.display = 'block';
+                if (datetimeInput) datetimeInput.required = true;
+            }
+        } else if (type === 'Wycieczka') {
+            if (singleDate) {
+                singleDate.style.display = 'block';
+                if (dateInput) dateInput.required = true;
+            }
+        }
+
+        // Aktualizuj zakres dat na podstawie wybranej opcji
+        updateDateRange();
+    }
+
+    if (optionSelect) {
+        optionSelect.addEventListener('change', updateForm);
+        updateForm(); // Wywołaj funkcję przy załadowaniu strony
+    }
+});
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+/* Styl dla całego body */
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #2c2f33; /* Ciemne tło */
+    color: #d1d5db; /* Jasnoszary tekst */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+/* Główny kontener logowania */
+.login-container {
+    background-color: #40444b; /* Szare tło pasujące do innych sekcji */
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Nagłówek */
+.login-container h2 {
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+}
+
+/* Stylizacja formularza */
+.input-group p {
+    margin: 1rem 0;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 0.8rem;
+    margin-top: 0.5rem;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background-color: #2c2f33;
+    color: #ffffff;
+    outline: none;
+    transition: border 0.3s ease;
+}
+
+.input-group input:focus {
+    border-color: #7289da; /* Kolor akcentu */
+}
+
+/* Przycisk logowania */
+.btn-submit {
+    background-color: #4CAF50; /* Zielony akcent */
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.btn-submit:hover {
+    background-color: #388e3c; /* Ciemniejszy zielony na hover */
+}
+
+/* Linki pod formularzem */
+.links {
+    margin-top: 1rem;
+}
+
+.links a {
+    color: #7289da;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.links a:hover {
+    color: #5b6eae; /* Jaśniejszy akcent */
+}

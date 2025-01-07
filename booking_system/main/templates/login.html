@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logowanie</title>
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+</head>
+<body>
+    <div class="login-container">
+        <div class="form-box">
+            <h2>Logowanie</h2>
+
+            {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+            <li>{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="input-group">
+                    {{ form.as_p }}
+                </div>
+                <button type="submit" class="btn-submit">Zaloguj się</button>
+            </form>
+            <div class="links">
+                <p><a href="{% url 'password_reset' %}">Zapomniałem hasła</a></p>
+                <p>Nie masz konta? <a href="{% url 'register' %}">Zarejestruj się</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
