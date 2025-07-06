@@ -173,8 +173,8 @@ main.service-list {
 /* Stylizacja sekcji statusu serwisu */
 .service-status-notification {
     background-color: #40444b;
-    padding: 20px;
-    margin: 20px 0;
+    padding: 10px;
+    margin: 10px 0;
     border-radius: 8px;
     color: #fff;
     position: fixed;  /* Przykleja na dole strony */
@@ -193,6 +193,7 @@ main.service-list {
 .service-status-notification p {
     font-size: 1.1em;
 }
+
 
 
 /* Responsywność */

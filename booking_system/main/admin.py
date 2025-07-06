@@ -3,26 +3,39 @@ from os import path
 from django.urls import reverse
 from reportlab.lib import colors
 from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.http import HttpResponseRedirect
 from reportlab.lib.pagesizes import letter
 from . import models
 from .forms import ReservationAdminForm
-from .models import User, Review, ServiceOption, ServiceStatus, FinanceSummaryLink
+from .models import User, Review, ServiceOption, ServiceStatus, DataSummaryLink
 from django.utils.timezone import now
 from django import forms
 from django.contrib import admin
 from django.db import models
 from .models import Service
 from django.http import HttpResponse
-from django.db.models import Count
+from django.db.models import Count, Min
 from django.db.models import Sum
 from .models import Reservation, Review
 from django.template.response import TemplateResponse
 from django.urls import path
 from .models import Reservation, Message
 from django.db import transaction
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import ttfonts
+import os
+from django.conf import settings
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer
+from reportlab.lib import colors
+from reportlab.lib.units import inch
 
 class CustomUserAdmin(BaseUserAdmin):
     model = User
@@ -59,18 +72,26 @@ class ServiceAdmin(admin.ModelAdmin):
     inlines = [ServiceOptionInline]
 
     def get_min_price(self, obj):
-        # Pobranie powiązanych opcji usługi
         options = obj.service_options.all()
-        min_price = options.aggregate(models.Min('price'))['price__min']
+        min_price = options.aggregate(Min('price'))['price__min']
         if min_price is not None:
-            return f"{min_price:.2f} zł"  # Dodanie dwóch miejsc po przecinku dla stałego formatu
+            return f"{min_price:.2f} punktów"
         return "Brak cen"
+
+    get_min_price.short_description = "Najniższa cena"
+
     def get_capacity(self, obj):
         # Pobierz maksymalną pojemność z powiązanych opcji
         options = obj.service_options.all()
-        if options.exists():
-            return max(option.capacity for option in options)
-        return "Brak danych"
+
+        # Obsługa queryset i listy
+        if hasattr(options, 'exists') and not options.exists():
+            return "Brak danych"
+
+        if not options:  # Dla listy, sprawdzamy, czy jest pusta
+            return "Brak danych"
+
+        return max(option.capacity for option in options)
 
     get_capacity.short_description = "Maks. pojemność"
 
@@ -83,7 +104,12 @@ class ReservationAdmin(admin.ModelAdmin):
     )
     list_filter = ('status', 'option', 'user')
     search_fields = ('user__email', 'option__name', 'service_name')
-    actions = ['cancel_reservation', 'approve_cancellation', 'approve_modification', 'reject_modification']
+
+    readonly_fields = ('new_start_datetime', 'new_end_datetime')
+
+    actions = ['cancel_reservation', 'approve_cancellation', 'approve_modification', 'reject_modification','confirm_reservations']
+
+
 
     def save_model(self, request, obj, form, change):
         """Tworzy wiadomość od administratora i automatycznie powiązuje ją z rezerwacją."""
@@ -107,74 +133,50 @@ class ReservationAdmin(admin.ModelAdmin):
 
     service_name.short_description = "Nazwa usługi"
 
-    def approve_modification(self, request, queryset):
-        for reservation in queryset.filter(status='pending modification'):
-            if reservation.new_start_datetime and reservation.new_end_datetime:
-                reservation.start_datetime = reservation.new_start_datetime
-                reservation.end_datetime = reservation.new_end_datetime
-                reservation.new_start_datetime = None
-                reservation.new_end_datetime = None
+    def confirm_reservations(self, request, queryset):
+        updated = 0
+        for reservation in queryset:
+            if reservation.status == 'pending':
                 reservation.status = 'confirmed'
                 reservation.save()
-                self.message_user(request, f"Zmiana terminu rezerwacji {reservation.id} została zatwierdzona.")
+                updated += 1
+        self.message_user(
+            request,
+            f"{updated} rezerwacja(-e) zostały potwierdzone.",
+            level='success'
+        )
+
+    confirm_reservations.short_description = "Potwierdź wybrane rezerwacje"
+
+    def approve_cancellation(self, request, queryset):
+        for reservation in queryset:
+            if reservation.status == 'pending cancellation':
+                try:
+                    with transaction.atomic():
+                        reservation.status = 'cancelled'
+                        reservation.save()
+
+                        refund_points = reservation.price
+                        reservation.user.balance += refund_points
+                        reservation.user.save()
+
+                        self.message_user(
+                            request,
+                            f"Rezerwacja {reservation.id} została anulowana. Zwrocono {refund_points:.2f} punktów (50%)."
+                        )
+                except Exception as e:
+                    self.message_user(
+                        request,
+                        f"Błąd podczas anulowania rezerwacji {reservation.id}: {str(e)}",
+                        level='error'
+                    )
             else:
                 self.message_user(
                     request,
-                    f"Rezerwacja {reservation.id} nie ma nowych terminów do zatwierdzenia.",
-                    level='error'
+                    f"Rezerwacja {reservation.id} nie jest w stanie oczekującym na anulowanie.",
+                    level='warning'
                 )
-
-    approve_modification.short_description = "Zatwierdź zmiany terminów"
-    def reject_modification(self, request, queryset):
-        queryset.filter(status='pending modification').update(
-            new_start_datetime=None,
-            new_end_datetime=None,
-            status='confirmed'
-        )
-        self.message_user(request, f"Zmiana terminów została odrzucona.")
-
-    reject_modification.short_description = "Odrzuć zmiany terminów"
-
-    def cancel_reservation(self, request, queryset):
-        """Anulowanie rezerwacji i zwrot pieniędzy"""
-        for reservation in queryset:
-            if reservation.status == 'pending cancellation':
-                try:
-                    with transaction.atomic():
-                        reservation.status = 'cancelled'
-                        reservation.save()
-                        reservation.user.balance += reservation.price
-                        reservation.user.save()
-                        self.message_user(request, f"Rezerwacja {reservation.id} została anulowana, a środki zwrócone.")
-                except Exception as e:
-                    self.message_user(request, f"Błąd podczas anulowania rezerwacji {reservation.id}: {str(e)}",
-                                      level='error')
-            else:
-                self.message_user(request, f"Rezerwacja {reservation.id} nie jest w stanie oczekiwania na anulowanie.",
-                                  level='error')
-
-    cancel_reservation.short_description = 'Anuluj wybrane rezerwacje i zwróć pieniądze'
-
-    def approve_cancellation(self, request, queryset):
-        """Zatwierdzenie anulowania rezerwacji"""
-        for reservation in queryset:
-            if reservation.status == 'pending cancellation':
-                try:
-                    with transaction.atomic():
-                        reservation.status = 'cancelled'
-                        reservation.save()
-                        reservation.user.balance += reservation.price
-                        reservation.user.save()
-                        self.message_user(request, f"Rezerwacja {reservation.id} została anulowana, a środki zwrócone.")
-                except Exception as e:
-                    self.message_user(request,
-                                      f"Błąd podczas zatwierdzania anulowania rezerwacji {reservation.id}: {str(e)}",
-                                      level='error')
-            else:
-                self.message_user(request, f"Rezerwacja {reservation.id} nie jest w stanie oczekiwania na anulowanie.",
-                                  level='error')
-
-    approve_cancellation.short_description = 'Zatwierdź anulowanie rezerwacji'
+    approve_cancellation.short_description = "Zatwierdź anulowanie rezerwacji i zwróć pieniądze"
 
 
 admin.site.register(Reservation, ReservationAdmin)
@@ -203,6 +205,10 @@ class MessageAdmin(admin.ModelAdmin):
         self.message_user(request, f"{queryset.count()} wiadomości oznaczono jako przeczytane.")
     mark_as_read.short_description = "Oznacz jako przeczytane"
 
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.filter(sender='user')  # 👈 tylko od użytkowników
+
     def mark_as_unread(self, request, queryset):
         queryset.update(is_read=False)
         self.message_user(request, f"{queryset.count()} wiadomości oznaczono jako nieprzeczytane.")
@@ -220,19 +226,17 @@ class ServiceStatusAdmin(admin.ModelAdmin):
     list_display = ('status', 'message', 'next_available')
     search_fields = ('status',)
 
-class FinanceSummaryAdminView:
-    """Niestandardowy widok administracyjny dla podsumowania finansowego."""
+class DataSummaryAdminView:
 
     def get_urls(self):
-        """Dodaje niestandardowe ścieżki URL."""
         custom_urls = [
-            path('finance-summary/', self.admin_site.admin_view(self.finance_summary_view), name='finance-summary'),
-            path('finance-summary/export-csv/', self.admin_site.admin_view(self.export_csv), name='export-csv'),
-            path('finance-summary/export-pdf/', self.admin_site.admin_view(self.export_pdf), name='export-pdf'),
+            path('data-summary/', self.admin_site.admin_view(self.finance_summary_view), name='data-summary'),
+            path('data-summary/export-csv/', self.admin_site.admin_view(self.export_csv), name='export-csv'),
+            path('data-summary/export-pdf/', self.admin_site.admin_view(self.export_pdf), name='export-pdf'),
         ]
         return custom_urls
 
-    def finance_summary_view(self, request, *args, **kwargs):
+    def data_summary_view(self, request, *args, **kwargs):
         """Widok dla podsumowania finansowego."""
 
         # Obliczenia danych
@@ -259,13 +263,13 @@ class FinanceSummaryAdminView:
         }
 
         # Renderowanie szablonu
-        return TemplateResponse(request, "admin/finance_summary.html", context)
+        return TemplateResponse(request, "admin/data_summary.html", context)
 
     def export_csv(self, request, *args, **kwargs):
         """Eksport danych do pliku CSV."""
 
         response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = 'attachment; filename="finance_summary.csv"'
+        response['Content-Disposition'] = 'attachment; filename="data_summary.csv"'
 
         # Dodaj kodowanie UTF-8 dla polskich znaków
         response.write('\ufeff'.encode('utf-8'))  # BOM dla poprawnej obsługi UTF-8 w Excelu
@@ -273,7 +277,7 @@ class FinanceSummaryAdminView:
         writer = csv.writer(response, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
         # Nagłówek pliku CSV
-        writer.writerow(['Podsumowanie finansowe'])
+        writer.writerow(['Podsumowanie danych'])
         writer.writerow([])  # Pusta linia
         writer.writerow(['Statystyka', 'Wartość'])
 
@@ -294,7 +298,7 @@ class FinanceSummaryAdminView:
         # Dane wierszy
         writer.writerow(['Liczba rezerwacji', total_reservations])
         writer.writerow(['Liczba opinii', total_reviews])
-        writer.writerow(['Przychód (PLN)', f"{total_revenue:.2f}"])
+        writer.writerow(['Przychód (punkty)', f"{total_revenue:.2f}"])
         writer.writerow(['Liczba użytkowników', total_users])
         writer.writerow(['Najpopularniejsza usługa', most_popular_service_name])
         writer.writerow(['Liczba rezerwacji usługi', most_popular_service_count])
@@ -302,31 +306,33 @@ class FinanceSummaryAdminView:
         return response
 
     def export_pdf(self, request, *args, **kwargs):
-        """Eksport danych do pliku PDF."""
-
+        """Eksport danych do pliku PDF z polskimi znakami"""
 
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="finance_summary.pdf"'
+        response['Content-Disposition'] = 'attachment; filename="data_summary.pdf"'
 
-        # Dokument PDF
+        # Rejestracja czcionki (ścieżka względem głównego folderu projektu)
+        font_path = os.path.join(settings.BASE_DIR, 'fonts', 'DejaVuSans.ttf')
+        pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+
         doc = SimpleDocTemplate(response, pagesize=letter)
         elements = []
 
         # Tytuł
-        title = [['Podsumowanie finansowe']]
+        title = [['Podsumowanie danych']]
         title_table = Table(title)
         title_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), colors.blue),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, -1), 'DejaVu'),
             ('FONTSIZE', (0, 0), (-1, -1), 16),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
         ]))
         elements.append(title_table)
         elements.append(Spacer(1, 0.5 * inch))
 
-        # Tabela danych
+        # Pobieranie danych
         total_reservations = Reservation.objects.count()
         total_reviews = Review.objects.count()
         total_revenue = Reservation.objects.aggregate(total=Sum('price'))['total'] or 0
@@ -336,41 +342,39 @@ class FinanceSummaryAdminView:
             .order_by('-reservation_count')
             .first()
         )
-
         most_popular_service_name = most_popular_service.name if most_popular_service else "Brak danych"
         most_popular_service_count = most_popular_service.reservation_count if most_popular_service else 0
 
+        # Tabela danych
         data = [
             ['Statystyka', 'Wartość'],
-            ['Liczba rezerwacji', total_reservations],
-            ['Liczba opinii', total_reviews],
-            ['Przychód (PLN)', f"{total_revenue:.2f}"],
-            ['Liczba użytkowników', total_users],
+            ['Liczba rezerwacji', str(total_reservations)],
+            ['Liczba opinii', str(total_reviews)],
+            ['Przychód (punkty)', f"{total_revenue:.2f}"],
+            ['Liczba użytkowników', str(total_users)],
             ['Najpopularniejsza usługa', most_popular_service_name],
-            ['Liczba rezerwacji usługi', most_popular_service_count],
+            ['Liczba rezerwacji usługi', str(most_popular_service_count)],
         ]
 
         table = Table(data, colWidths=[2.5 * inch, 3 * inch])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'DejaVu'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ]))
         elements.append(table)
 
-        # Generowanie PDF
         doc.build(elements)
-
         return response
 
 
-@admin.register(FinanceSummaryLink)
-class FinanceSummaryLinkAdmin(admin.ModelAdmin):
+@admin.register(DataSummaryLink)
+class DataSummaryLinkAdmin(admin.ModelAdmin):
     # Ukryj przyciski "Dodaj", "Edytuj" itd.
     def has_add_permission(self, request):
         return False
@@ -383,4 +387,4 @@ class FinanceSummaryLinkAdmin(admin.ModelAdmin):
 
     # Przekierowanie do widoku podsumowania
     def changelist_view(self, request, extra_context=None):
-        return HttpResponseRedirect(reverse('finance-summary'))  # Nazwa URL Twojego widoku
+        return HttpResponseRedirect(reverse('data-summary'))  # Nazwa URL Twojego widoku

@@ -30,7 +30,7 @@
             <aside>
                 <h3>Saldo:</h3>
                 {% if request.user.is_authenticated %}
-                    <p>{{ request.user.first_name }} {{ request.user.last_name }} - {{ request.user.balance }} zł</p>
+                    <p>{{ request.user.first_name }} {{ request.user.last_name }} - {{ request.user.balance }} punktów</p>
                 {% else %}
                     <p>Zaloguj się, aby zobaczyć swoje saldo.</p>
                 {% endif %}
@@ -52,7 +52,7 @@
                 <p><strong>Lokalizacja:</strong> {{ service.location }}</p>
                  <p><strong>Cena od:</strong>
     {% if service.get_min_price %}
-        {{ service.get_min_price }} zł
+        {{ service.get_min_price }} punktów
         {% if service.type == "Hotel" %}
             / za noc
         {% endif %}
@@ -81,12 +81,7 @@
     data-type="{{ service.type }}"
     {% if forloop.first %}selected{% endif %}>
     {{ option.name }} (dla {{ option.capacity }} osób)
-    {% for avail in availability %}
-        {% if avail.option_id == option.id %}
-            (dostępność: {{ avail.available_from|date:"d.m.Y" }} - {{ avail.available_to|date:"d.m.Y" }})
-        {% endif %}
-    {% endfor %}
-    - {{ option.price }} zł
+    - {{ option.price }} punktów
 </option>
     {% endfor %}
 </select>

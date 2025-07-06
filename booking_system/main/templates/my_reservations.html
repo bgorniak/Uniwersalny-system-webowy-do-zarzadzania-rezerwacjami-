@@ -29,7 +29,6 @@
 
             <div class="actions">
                 {% if reservation.status != 'cancelled' %}
-                    <button class="toggle-form-button" onclick="toggleForm('form-{{ reservation.id }}')">Zmień datę</button>
                     <form action="{% url 'cancel_reservation' reservation.id %}" method="post" class="cancel-form">
                         {% csrf_token %}
                         <button type="submit" class="cancel-button">Usuń rezerwację</button>
@@ -37,81 +36,10 @@
                 {% endif %}
             </div>
 
-            <div id="form-{{ reservation.id }}" class="change-date-form" style="display: none;">
-                <form action="{% url 'request_change_date' reservation.id %}" method="post">
-                    {% csrf_token %}
-                    <label for="new_start_date-{{ reservation.id }}">Nowa data rozpoczęcia:</label>
-                    <input type="text" id="new_start_date-{{ reservation.id }}" name="new_start_date"
-       data-available-from="{{ reservation.available_from }}"
-       data-available-to="{{ reservation.available_to }}" required>
-
-{% if reservation.end_date %}
-    <input type="text" id="new_end_date-{{ reservation.id }}" name="new_end_date"
-           data-available-from="{{ reservation.available_from }}"
-           data-available-to="{{ reservation.available_to }}">
-{% endif %}
-                    <button type="submit" class="submit-change-button">Zatwierdź zmianę</button>
-                </form>
-            </div>
         </div>
     {% endfor %}
 </div>
         </main>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script>
-     document.addEventListener("DOMContentLoaded", function () {
-    const today = new Date().toISOString().split("T")[0]; // Dzisiejsza data w formacie ISO
-
-    // Funkcja do inicjalizacji Flatpickr z zakresami dat
-    function initFlatpickr(input) {
-        const availableFrom = input.dataset.availableFrom || today; // Pobranie minimalnej daty
-        const availableTo = input.dataset.availableTo || null;     // Pobranie maksymalnej daty
-
-        flatpickr(input, {
-            dateFormat: "Y-m-d",
-            minDate: availableFrom,
-            maxDate: availableTo,
-            disableMobile: true,
-        });
-    }
-
-    // Funkcja rozwijająca formularz i inicjalizująca Flatpickr
-    function toggleForm(formId) {
-        const form = document.getElementById(formId);
-
-        if (form.style.display === 'none') {
-            form.style.display = 'block';
-
-            // Znajdź pola daty w formularzu i zainicjalizuj Flatpickr
-            const startDateInput = form.querySelector('input[name="new_start_date"]');
-            const endDateInput = form.querySelector('input[name="new_end_date"]');
-
-            if (startDateInput) {
-                initFlatpickr(startDateInput);
-            }
-            if (endDateInput) {
-                initFlatpickr(endDateInput);
-            }
-        } else {
-            form.style.display = 'none';
-        }
-    }
-
-    // Przypisz funkcję toggleForm do każdego przycisku zmiany daty
-    const toggleButtons = document.querySelectorAll('.toggle-form-button');
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const formId = this.getAttribute('onclick').match(/'([^']+)'/)[1];
-            toggleForm(formId);
-        });
-    });
-});
-
-
-
-</script>
-
-
 </body>
 </html>

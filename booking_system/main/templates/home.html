@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uniwersalny System Webowy Do Zarządzania Rezerwacjami</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
@@ -37,11 +37,6 @@
         <option value="Wycieczka" {% if request.GET.type == "Wycieczka" %}selected{% endif %}>Wycieczka</option>
     </select>
 
-        <label for="check-in">Data dostępności od:</label>
-        <input type="date" id="check-in" name="check-in">
-
-        <label for="check-out">Data dostępności do:</label>
-        <input type="date" id="check-out" name="check-out">
            <label for="option">Opcja usługi:</label>
 <select id="option" name="option">
     <option value="">Wszystkie opcje</option>
@@ -64,7 +59,7 @@
 
     <label for="price">Cena do:</label>
     <input type="range" id="price" name="price" min="0" max="1000" step="10" value="{{ request.GET.price|default:1000 }}" oninput="updatePriceDisplay(this.value)">
-    <output id="price-display">{{ request.GET.price|default:1000 }} zł</output>
+    <output id="price-display">{{ request.GET.price|default:1000 }} punktów</output>
 
     <button type="submit">Szukaj</button>
 </form>
@@ -79,7 +74,7 @@
                 <p><strong>Lokalizacja:</strong> {{ service.location }}</p>
                 <p><strong>Cena od:</strong>
     {% if service.get_min_price %}
-        {{ service.get_min_price }} zł
+        {{ service.get_min_price }} punktów
         {% if service.type == "Hotel" %}
             / za noc
         {% endif %}
@@ -109,54 +104,66 @@
         {% endif %}
     </div>
 
-    <script>
-        function toggleServiceFields() {
-        const serviceType = document.getElementById('service-type').value;
+   <script>
+document.addEventListener("DOMContentLoaded", function () {
+    const serviceTypeSelect = document.getElementById('service-type');
+    const optionSelect = document.getElementById('option');
+    const priceSlider = document.getElementById('price');
+    const priceDisplay = document.getElementById('price-display');
 
-        // Ukrywanie lub wyświetlanie odpowiednich pól w zależności od wybranego typu usługi
-        document.getElementById('hotel-fields').style.display = (serviceType === 'Hotel') ? 'block' : 'none';
-        document.getElementById('restaurant-fields').style.display = (serviceType === 'Restauracja') ? 'block' : 'none';
-        document.getElementById('spa-fields').style.display = (serviceType === 'SPA&WELLNESS') ? 'block' : 'none';
-        document.getElementById('trip-fields').style.display = (serviceType === 'Wycieczka') ? 'block' : 'none';
-    }
-
-    // Inicjalizacja przy załadowaniu strony
-    document.addEventListener("DOMContentLoaded", toggleServiceFields);
-
-    // Aktualizacja suwaka ceny
-    document.getElementById('price').addEventListener('input', function (e) {
-        const value = e.target.value;
-        const max = e.target.max;
-        const percentage = (value / max) * 100;
-
-        // Ustalamy kolor gradientu na podstawie wartości suwaka
-        e.target.style.background = `linear-gradient(to right, #ff0000 ${percentage}%, #ffff00 ${percentage}%, #4CAF50 ${percentage}%)`;
-        // Aktualizujemy tekst ceny
-        document.getElementById('price-display').textContent = `${value} zł`;
-    });
     function fetchServiceOptions(type) {
-    if (!type) {
-        document.getElementById('option').innerHTML = '<option value="">Wszystkie opcje</option>';
-        return;
+        optionSelect.innerHTML = '<option value="">Wszystkie opcje</option>';
+        if (!type) return;
+
+        fetch(`/api/get_service_options/?type=${encodeURIComponent(type)}`)
+            .then(response => response.json())
+            .then(data => {
+                data.options.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option.id;
+                    opt.textContent = option.name;
+                    optionSelect.appendChild(opt);
+                });
+
+                const selectedOption = "{{ request.GET.option|default:'' }}";
+                if (selectedOption) {
+                    optionSelect.value = selectedOption;
+                }
+            })
+            .catch(error => console.error('Błąd przy pobieraniu opcji:', error));
     }
 
-    fetch(`/api/get_service_options/?type=${type}`)
-        .then(response => response.json())
-        .then(data => {
-            const optionSelect = document.getElementById('option');
-            optionSelect.innerHTML = '<option value="">Wszystkie opcje</option>';
-            data.options.forEach(option => {
-                const optionElement = document.createElement('option');
-                optionElement.value = option.id;
-                optionElement.textContent = option.name;
-                optionSelect.appendChild(optionElement);
-            });
-        })
-        .catch(error => console.error('Error fetching options:', error));
-}
+    if (serviceTypeSelect && optionSelect) {
+        serviceTypeSelect.addEventListener('change', function () {
+            fetchServiceOptions(this.value);
+        });
+
+        if (serviceTypeSelect.value) {
+            fetchServiceOptions(serviceTypeSelect.value);
+        }
+    }
+
+    // 🟩 Ustaw tło gradientowe suwaka
+    function updateSliderBackground(value, max) {
+        const percentage = (value / max) * 100;
+        priceSlider.style.background = `linear-gradient(to right, #ff0000 ${percentage}%, #ffff00 ${percentage}%, #4CAF50 ${percentage}%)`;
+        priceDisplay.textContent = `${value} punktów`;
+    }
+
+    if (priceSlider) {
+        const value = priceSlider.value;
+        const max = priceSlider.max;
+
+        updateSliderBackground(value, max); // ⬅️ wywołaj na starcie
+
+        priceSlider.addEventListener('input', function () {
+            updateSliderBackground(this.value, this.max);
+        });
+    }
+});
+</script>
 
 
-    </script>
 </body>
 
 </html>

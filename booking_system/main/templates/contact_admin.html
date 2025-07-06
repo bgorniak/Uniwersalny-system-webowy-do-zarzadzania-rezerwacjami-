@@ -25,13 +25,17 @@
         <label for="message">Wiadomość:</label>
         <textarea id="message" name="message" placeholder="Wprowadź treść wiadomości" rows="6" required></textarea>
 
-        {% if success_message %}
-            <p class="success-message">{{ success_message }}</p>
-        {% endif %}
-
         <button type="submit">Wyślij wiadomość</button>
     </form>
 </section>
+            <br>
+             {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
         </main>
     </div>
 </body>

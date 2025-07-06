@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Aktywacja konta</title>
+</head>
+<body>
+    <p>Witaj {{ user.first_name }},</p>
+
+    <p>Dziękujemy za rejestrację!</p>
+
+    <p>Aby aktywować swoje konto, kliknij w poniższy przycisk:</p>
+
+    <p>
+        <a href="http://localhost:8000/activate/{{ uid }}/{{ token }}/"
+           style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
+            Aktywuj konto
+        </a>
+    </p>
+
+    <p>Lub skopiuj i wklej ten link w przeglądarce:</p>
+    <p><code>http://localhost:8000/activate/{{ uid }}/{{ token }}/</code></p>
+
+</body>
+</html>

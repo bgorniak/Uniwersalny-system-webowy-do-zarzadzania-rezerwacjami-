@@ -3,7 +3,7 @@ from datetime import date
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, SetPasswordForm
 from django import forms
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django_flatpickr.widgets import DatePickerInput
 from pydantic import ValidationError
@@ -13,6 +13,23 @@ from .models import Message, ServiceOption, Review, User, Reservation, Service
 
 class CustomAuthenticationForm(AuthenticationForm):
     username = forms.EmailField(label="Adres email", widget=forms.EmailInput(attrs={"class": "form-control"}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['username'].label = "Adres email"  # Zamień label na 'Adres email'
+
+    def clean(self):
+        email = self.cleaned_data.get('username')  # Pobiera email z pola 'username'
+        password = self.cleaned_data.get('password')
+
+        if email and password:
+            self.user_cache = authenticate(self.request, username=email, password=password)
+            if self.user_cache is None:
+                raise forms.ValidationError("Błędny adres email lub hasło.", code='invalid_login')
+            elif not self.user_cache.is_active:
+                raise forms.ValidationError("To konto jest nieaktywne.", code='inactive')
+
+        return self.cleaned_data
 
 class RegistrationForm(forms.ModelForm):
     password = forms.CharField(
@@ -128,17 +145,31 @@ class CustomPasswordResetForm(PasswordResetForm):
 class CustomSetPasswordForm(SetPasswordForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Usuń tekst pomocy i komunikaty walidacji
         for field_name in ['new_password1', 'new_password2']:
             self.fields[field_name].help_text = None
-            self.fields[field_name].widget.attrs.update({'placeholder': 'Wprowadź hasło'})
+            self.fields[field_name].widget.attrs.update({
+                'class': 'form-control',  # <-- dodaj klasę do stylowania
+                'placeholder': 'Wprowadź hasło'
+            })
 
     def clean_new_password1(self):
         new_password1 = self.cleaned_data.get('new_password1')
-        user = self.user
-        if user.check_password(new_password1):
+
+        # Uwaga: `self.user` jest dostępny w SetPasswordForm
+        if self.user.check_password(new_password1):
             raise forms.ValidationError("Nowe hasło nie może być takie samo jak poprzednie.")
+
         return new_password1
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password1 = cleaned_data.get('new_password1')
+        new_password2 = cleaned_data.get('new_password2')
+
+        if new_password1 and new_password2 and new_password1 != new_password2:
+            raise forms.ValidationError("Hasła nie są takie same.")
+
+        return cleaned_data
 class EmailChangeForm(forms.Form):
     new_email = forms.EmailField(
         label="Nowy adres e-mail",

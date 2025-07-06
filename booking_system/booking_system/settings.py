@@ -11,13 +11,16 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 LANGUAGE_CODE = 'pl'
-TIME_ZONE = 'Europe/Warsaw'
+
 USE_TZ = True # Ustawienie języka na polski
+TIME_ZONE = 'Europe/Warsaw'
+
 LANGUAGES = [
     ('pl', 'Polski'),
     ('en', 'English'),
 ]
 
+LOGIN_REDIRECT_URL = 'home'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -96,6 +99,10 @@ TEMPLATES = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 WSGI_APPLICATION = 'booking_system.wsgi.application'
 
 
@@ -149,18 +156,20 @@ environ.Env.read_env(BASE_DIR / '.env')
 
 
 EMAIL_BACKEND = 'anymail.backends.sendgrid.EmailBackend'
+
+
 ANYMAIL = {
     "SENDGRID_API_KEY": env('SENDGRID_API_KEY'),
 }
 
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')  # np. 'noreply@twojadomena.pl'
+DEFAULT_FROM_EMAIL = 'bartoszgorniak331@gmail.com'
 
-# Konfiguracja SendGrid SMTP
+
 EMAIL_HOST = 'smtp.sendgrid.net'
-EMAIL_USE_SSL = True  # Dla portu 465
+EMAIL_USE_SSL = True
 EMAIL_PORT = 465
-EMAIL_HOST_USER = 'apikey'  # SendGrid wymaga użycia 'apikey' jako użytkownika
-EMAIL_HOST_PASSWORD = env('SENDGRID_API_KEY')  # Twój klucz API
+EMAIL_HOST_USER = 'apikey'
+EMAIL_HOST_PASSWORD = env('SENDGRID_API_KEY')
 
 
 AUTH_USER_MODEL = 'main.User'

@@ -2,13 +2,15 @@ from django import forms
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.views import PasswordResetConfirmView
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.db import transaction
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, get_object_or_404
 from django.template.loader import render_to_string
+from django.urls import reverse_lazy
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from .forms import UserUpdateForm, ReviewForm, CustomSetPasswordForm, EmailChangeForm, RegistrationForm
@@ -26,6 +28,10 @@ from datetime import datetime
 from django.utils.timezone import make_aware
 from django.contrib.auth import views as auth_views
 from .forms import CustomPasswordResetForm
+from email.utils import formataddr
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from email.utils import formataddr
 
 
 def register(request):
@@ -34,26 +40,38 @@ def register(request):
         form = RegistrationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.balance = 1000  # Przyznanie 1000 punktów za rejestrację
+            user.balance = 2000
             user.save()
 
-            # Tworzenie wiadomości e-mail z linkiem aktywacyjnym
             mail_subject = 'Aktywacja konta'
-            message = render_to_string('acc_active_email.txt', {
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = account_activation_token.make_token(user)
+
+            # Wersje tekstowa i HTML
+            text_content = render_to_string('acc_active_email.txt', {
                 'user': user,
-                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-                'token': account_activation_token.make_token(user),
+                'uid': uid,
+                'token': token,
             })
+            html_content = render_to_string('acc_active_email.html', {
+                'user': user,
+                'uid': uid,
+                'token': token,
+            })
+
             to_email = form.cleaned_data.get('email')
-            email = EmailMessage(
+            email = EmailMultiAlternatives(
                 subject=mail_subject,
-                body=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                body=text_content,
+                from_email=formataddr(
+                    ("Uniwersalny System Webowy Do Zarządzania Rezerwacjami", settings.DEFAULT_FROM_EMAIL)),
                 to=[to_email]
             )
+            email.attach_alternative(html_content, "text/html")
             email.send()
             messages.success(request, "Rejestracja zakończona sukcesem! Na podany adres e-mail został wysłany link aktywacyjny.")
-            return redirect('login')  # Utrzymaj użytkownika na stronie rejestracji
+            return redirect('login')
     return render(request, 'register.html', {'form': form})
 
 def activate(request, uidb64, token):
@@ -161,7 +179,6 @@ def get_service_options(request):
     options = ServiceOption.objects.filter(service__type=service_type).values('id', 'name')
     return JsonResponse({'options': list(options)})
 
-
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('home')
@@ -183,7 +200,8 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     messages.success(request, "Wylogowano pomyślnie!")
-    return redirect('home')  # Przekierowanie na stronę główną
+    return redirect('home')
+
 
 
 def service_detail(request, service_id):
@@ -220,16 +238,16 @@ def add_review(request, service_id):
             review.service = service
             review.save()
 
-            # Przyznanie 300 punktów za dodanie opinii
-            request.user.balance += 300
+            request.user.balance += 1000
             request.user.save()
 
-            messages.success(request, "Twoja opinia została dodana! Otrzymałeś 300 punktów.", extra_tags='review')
+            messages.success(request, "Twoja opinia została dodana! Otrzymałeś 1000 punktów.", extra_tags='review')
+            return redirect('service_detail', service_id=service_id)
         else:
-            messages.error(request, "Wystąpił błąd podczas dodawania opinii. Upewnij się, że wszystkie pola są poprawnie wypełnione.", extra_tags='review')
+            messages.error(request, "Wystąpił błąd podczas dodawania opinii. Sprawdź dane i spróbuj ponownie.", extra_tags='review')
 
-    return redirect('service_detail', service_id=service_id)
-
+    form = ReviewForm()
+    return render(request, 'service_detail.html', {'service': service, 'form': form})
 @login_required
 def make_reservation(request, service_id):
     service = get_object_or_404(Service, id=service_id)
@@ -260,7 +278,7 @@ def make_reservation(request, service_id):
                 messages.error(request, "Nieprawidłowy format daty.", extra_tags='reservation')
                 return redirect('service_detail', service_id=service_id)
 
-            today = now().date()  # Dzisiejsza data jako date
+            today = now().date()
             if start_date.date() < today or end_date.date() < today:
                 messages.error(request, "Nie można zarezerwować usługi w przeszłości.", extra_tags='reservation')
                 return redirect('service_detail', service_id=service_id)
@@ -278,15 +296,15 @@ def make_reservation(request, service_id):
                 return redirect('service_detail', service_id=service_id)
 
             try:
-                start_date = make_aware(datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M'))  # Konwertuj na aware
+                start_date = make_aware(datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M'))
             except ValueError:
                 try:
-                    start_date = make_aware(datetime.strptime(datetime_str, '%Y-%m-%d %H:%M'))  # Format z odstępem
+                    start_date = make_aware(datetime.strptime(datetime_str, '%Y-%m-%d %H:%M'))
                 except ValueError:
                     messages.error(request, "Nieprawidłowy format daty i godziny.", extra_tags='reservation')
                     return redirect('service_detail', service_id=service_id)
 
-            if start_date < now():  # Porównanie offset-aware z offset-aware
+            if start_date < now():
                 messages.error(request, "Nie można zarezerwować usługi w przeszłości.", extra_tags='reservation')
                 return redirect('service_detail', service_id=service_id)
 
@@ -299,7 +317,6 @@ def make_reservation(request, service_id):
             messages.error(request, "Nie masz wystarczających środków na koncie.", extra_tags='reservation')
             return redirect('service_detail', service_id=service_id)
 
-        # Aktualizacja salda i zapis rezerwacji
         request.user.balance -= total_price
         request.user.save()
 
@@ -315,6 +332,8 @@ def make_reservation(request, service_id):
 
         messages.success(request, "Rezerwacja została pomyślnie utworzona!", extra_tags='reservation')
         return redirect('service_detail', service_id=service_id)
+
+
 @login_required
 def profile(request):
     user = request.user
@@ -437,19 +456,6 @@ def my_reviews(request):
 
 @login_required
 def contact_admin(request):
-    return render(request, 'contact_admin.html')
-
-@login_required
-def delete_account(request):
-    if request.method == "POST":
-        user = request.user
-        user.delete()
-        messages.success(request, "Twoje konto zostało pomyślnie usunięte.")
-        return redirect('home')  # Przekierowanie na stronę główną po usunięciu konta
-    return render(request, 'delete_account.html')
-
-@login_required
-def contact_admin(request):
     if request.method == 'POST':
         subject = request.POST.get('subject')
         content = request.POST.get('message')
@@ -470,10 +476,19 @@ def contact_admin(request):
     return render(request, 'contact_admin.html')
 
 @login_required
+def delete_account(request):
+    if request.method == "POST":
+        user = request.user
+        user.delete()
+        messages.success(request, "Twoje konto zostało pomyślnie usunięte.")
+        return redirect('home')  # Przekierowanie na stronę główną po usunięciu konta
+    return render(request, 'delete_account.html')
+
+
+@login_required
 def user_messages(request):
     messages = Message.objects.filter(user=request.user).order_by('-created_at')
 
-    # Oznacz wiadomości od administratora jako przeczytane
     Message.objects.filter(user=request.user, sender='admin', is_read=False).update(is_read=True)
 
     return render(request, 'user_messages.html', {'messages': messages})
@@ -481,16 +496,17 @@ def user_messages(request):
 def cancel_reservation_request(request, reservation_id):
     reservation = get_object_or_404(Reservation, id=reservation_id, user=request.user)
 
-    if reservation.status != 'pending cancellation':  # Upewnij się, że nie zmieniamy statusu dwa razy
+    if reservation.status != 'pending cancellation':
         reservation.status = 'pending cancellation'
-        reservation.save()  # Zapisz zmieniony status w bazie danych
+        reservation.save()
 
         messages.info(request, "Twoja rezerwacja została oznaczona jako oczekująca na anulowanie. Administrator musi ją zatwierdzić.")
     else:
         messages.error(request, "Ta rezerwacja jest już w trakcie anulowania.")
 
     return redirect('my_reservations')
-# Administrator potwierdzający usunięcie rezerwacji
+
+
 @login_required
 def confirm_reservation_cancellation(request, reservation_id):
     if not request.user.is_staff:
@@ -498,14 +514,15 @@ def confirm_reservation_cancellation(request, reservation_id):
 
     reservation = get_object_or_404(Reservation, id=reservation_id)
 
-    if reservation.status == 'pending cancellation':  # Tylko jeśli jest w stanie "oczekującym na anulowanie"
+    if reservation.status == 'pending cancellation':
         try:
-            with transaction.atomic():  # Transakcja atomowa dla bezpieczeństwa
-                # Zaktualizuj status na anulowany
+            with transaction.atomic():
                 reservation.status = 'cancelled'
-
-                # Zapisz zmiany w rezerwacji
                 reservation.save()
+
+                refund_points = reservation.price / 2  # zwrot 50% kosztu
+                reservation.user.balance += refund_points
+                reservation.user.save()
 
                 messages.success(
                     request,
@@ -529,22 +546,21 @@ def delete_review(request, review_id):
     review = get_object_or_404(Review, id=review_id, user=request.user)
 
     if request.method == 'POST':
-        redirect_to = request.POST.get('redirect_to', 'service_detail')  # Pobierz miejsce przekierowania
+        redirect_to = request.POST.get('redirect_to', 'service_detail')
         review.delete()
 
-        # Cofnięcie 300 punktów za usunięcie opinii
-        request.user.balance -= 300
+        request.user.balance -= 1000
         request.user.save()
 
         if redirect_to == 'my_reviews':
-            messages.success(request, "Opinia została pomyślnie usunięta.")
-            return redirect('my_reviews')  # Przekierowanie do sekcji „Dodane opinie”
+            messages.success(request, "Opinia została pomyślnie usunięta. Zostało ci zabrane 1000 punktów")
+            return redirect('my_reviews')
         else:
             service_id = review.service.id
-            messages.success(request, "Opinia została pomyślnie usunięta.")
+            messages.success(request, "Opinia została pomyślnie usunięta. Zostało ci zabrane 1000 punktów")
             return redirect('service_detail', service_id=service_id)
 
-    return redirect('my_reviews')  # Domyślne przekierowanie
+    return redirect('my_reviews')
 
 @login_required
 def admin_reply(request, message_id):
@@ -579,51 +595,23 @@ def cancel_reservation_request(request, reservation_id):
 
     return redirect('my_reservations')
 
-def request_change_date(request, reservation_id):
-    reservation = get_object_or_404(Reservation, id=reservation_id, user=request.user)
-
-    if request.method == 'POST':
-        new_start_date = request.POST.get('new_start_datetime')
-        new_end_date = request.POST.get('new_end_datetime')
-
-        # Walidacja nowych dat
-        new_start_date = datetime.strptime(new_start_date, '%Y-%m-%dT%H:%M')
-        new_end_date = datetime.strptime(new_end_date, '%Y-%m-%dT%H:%M') if new_end_date else None
-
-        # Ustawienie statusu rezerwacji na "pending modification"
-        reservation.status = 'pending modification'
-        reservation.new_start_datetime = new_start_date
-        reservation.new_end_datetime = new_end_date
-
-        reservation.save()
-
-        messages.success(request, "Zmiana terminu została zgłoszona i czeka na zatwierdzenie przez administratora.")
-        return redirect('my_reservations')
-
-    return redirect('my_reservations')
 
 class HotelRoomForm(forms.ModelForm):
     class Meta:
         model = ServiceOption
         fields = ['name', 'capacity', 'price']
 
-class CustomPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     template_name = 'password_reset_confirm.html'
-    form_class = CustomSetPasswordForm
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.user  # Przekazuje obiekt user do formularza
-        return kwargs
+    form_class = SetPasswordForm
+    success_url = reverse_lazy('login')
 
     def form_valid(self, form):
-        # Zapisz nowe hasło
-        user = self.user
-        user.set_password(form.cleaned_data['new_password1'])
-        user.save()
-        messages.success(self.request, "Twoje hasło zostało pomyślnie zmienione.")
+        user = form.save()
+        messages.success(self.request, "Hasło zostało zmienione pomyślnie.")
         return super().form_valid(form)
 
+from django.contrib.auth.tokens import default_token_generator
 
 def password_reset_request(request):
     form = CustomPasswordResetForm()
@@ -633,21 +621,35 @@ def password_reset_request(request):
             email = form.cleaned_data.get('email')
             user = User.objects.filter(email=email).first()
             if user:
+                user.is_active = True  # <-- TO DODAJ
+                user.save()
                 # Tworzenie wiadomości e-mail
-                mail_subject = 'Resetowanie hasła w systemie rezerwacji'
-                message = render_to_string('password_reset_email.txt', {
+                mail_subject = 'Resetowanie hasła'
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                token = default_token_generator.make_token(user)
+
+                # Wersje tekstowa i HTML
+                text_content = render_to_string('password_reset_email.txt', {
                     'user': user,
-                    'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-                    'token': default_token_generator.make_token(user),
+                    'uid': uid,
+                    'token': token,
                 })
-                email = EmailMessage(
+                html_content = render_to_string('password_reset_email.html', {
+                    'user': user,
+                    'uid': uid,
+                    'token': token,
+                })
+
+                to_email = form.cleaned_data.get('email')
+                email = EmailMultiAlternatives(
                     subject=mail_subject,
-                    body=message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[email]
+                    body=text_content,
+                    from_email=formataddr(
+                        ("Uniwersalny System Webowy Do Zarządzania Rezerwacjami", settings.DEFAULT_FROM_EMAIL)),
+                    to=[to_email]
                 )
+                email.attach_alternative(html_content, "text/html")
                 email.send()
-                messages.success(request, "Na podany adres e-mail został wysłany link do zresetowania hasła.")
                 return redirect('password_reset_done')
             else:
                 messages.error(request, "Nie znaleziono użytkownika z tym adresem e-mail.")
@@ -663,6 +665,9 @@ def email_change_confirm(request, uidb64, token):
     if user and default_token_generator.check_token(user, token):
         new_email = request.GET.get('email')
         if new_email:
+            if User.objects.filter(email=new_email).exists():
+                messages.error(request, "Podany adres e-mail jest już używany.")
+                return redirect('user_data')
             user.email = new_email
             user.save()
             messages.success(request, "Adres e-mail został pomyślnie zmieniony.")
@@ -677,5 +682,8 @@ def email_change_confirm(request, uidb64, token):
 def service_status(request):
     status = ServiceStatus.objects.first()  # Załóżmy, że mamy tylko jeden status
     return render(request, 'service_status.html', {'status': status})
+
+
+
 
 

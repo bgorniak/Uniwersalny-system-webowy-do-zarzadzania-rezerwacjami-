@@ -91,7 +91,7 @@ class ServiceOption(models.Model):
             raise ValidationError("Data rozpoczęcia nie może być późniejsza niż data zakończenia.")
 
     def __str__(self):
-        return f"{self.name} - {self.capacity} osób - {self.price} zł"
+        return f"{self.name} - {self.capacity} osób - {self.price} punktów"
 
 # Model rezerwacji
 class Reservation(models.Model):
@@ -121,6 +121,17 @@ class Reservation(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Status")
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Cena")
 
+    def save(self, *args, **kwargs):
+        if self.option and self.option.service:
+            self.service_name = self.option.service.name  # <- tutaj uzupełniasz nazwę usługi
+
+        if is_naive(self.start_datetime):
+            self.start_datetime = make_aware(self.start_datetime)
+        if self.end_datetime and is_naive(self.end_datetime):
+            self.end_datetime = make_aware(self.end_datetime)
+
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = "Rezerwacja"
         verbose_name_plural = "Rezerwacje"
@@ -131,12 +142,7 @@ class Reservation(models.Model):
         if self.end_datetime and self.end_datetime <= self.start_datetime:
             raise ValidationError("Data zakończenia musi być późniejsza niż data rozpoczęcia.")
 
-    def save(self, *args, **kwargs):
-        if is_naive(self.start_datetime):
-            self.start_datetime = make_aware(self.start_datetime)
-        if self.end_datetime and is_naive(self.end_datetime):
-            self.end_datetime = make_aware(self.end_datetime)
-        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"Rezerwacja przez {self.user} na {self.service_name}"
@@ -208,9 +214,9 @@ class ServiceStatus(models.Model):
     def __str__(self):
         return f"Status: {self.get_status_display()} - {self.next_available if self.next_available else 'Brak daty'}"
 
-class FinanceSummaryLink(Reservation):
+class DataSummaryLink(Reservation):
     class Meta:
         proxy = True  # To jest model proxy, nie tworzy nowej tabeli
-        verbose_name = "Podsumowanie finansowe"
-        verbose_name_plural = "Podsumowanie finansowe"
+        verbose_name = "Podsumowanie danych"
+        verbose_name_plural = "Podsumowanie danych"
 

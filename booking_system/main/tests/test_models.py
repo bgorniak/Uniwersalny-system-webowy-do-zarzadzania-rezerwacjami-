@@ -1,138 +1,297 @@
-# your_app/tests/test_models.py
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from ..models import Service, ServiceOption, Reservation, Review, Message
+import unittest
+from datetime import date, timedelta, datetime
+from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.utils.timezone import make_aware, now
+from ..models import UserManager, User, Service, ServiceOption, Reservation, Review, Message, ServiceStatus
 
-User = get_user_model()
 
-class UserModelTest(TestCase):
+class UserTestCase(unittest.TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            email='testuser@example.com',
-            password='testpassword123',
-            first_name='Test',
-            last_name='User',
-            balance=1000
-        )
+        self.user_manager = UserManager()
 
-    def test_user_creation(self):
-        self.assertEqual(self.user.email, 'testuser@example.com')
-        self.assertTrue(self.user.check_password('testpassword123'))
-        self.assertEqual(self.user.first_name, 'Test')
-        self.assertEqual(self.user.last_name, 'User')
-        self.assertEqual(self.user.balance, 1000)
-        self.assertFalse(self.user.is_active)  # Jeśli konto jest domyślnie nieaktywne
 
-class ServiceModelTest(TestCase):
+    def test_create_user_without_email(self):
+        with self.assertRaises(ValueError):
+            self.user_manager.create_user(email='', first_name='Test', last_name='User', password='password123')
+
+
+class ServiceTestCase(unittest.TestCase):
     def setUp(self):
-        self.service = Service.objects.create(
-            name='Hotel Test',
+        self.service = Service(
+            name='Hotel Service',
+            location='Test Location',
             type='Hotel',
-            location='Test Location'
-        )
-        self.service_option = ServiceOption.objects.create(
-            service=self.service,
-            name='Standard Room',
-            capacity=2,
-            price=200.00,
-            available_from=timezone.now(),
-            available_to=timezone.now() + timezone.timedelta(days=30)
+            available_from=date.today(),
+            available_to=date.today() + timedelta(days=10),
         )
 
     def test_service_creation(self):
-        self.assertEqual(self.service.name, 'Hotel Test')
-        self.assertEqual(self.service.type, 'Hotel')
-        self.assertEqual(self.service.location, 'Test Location')
-        self.assertIn(self.service_option, self.service.service_options.all())
+        self.assertEqual(str(self.service), 'Hotel Service')
 
-    def test_service_option_creation(self):
-        self.assertEqual(self.service_option.name, 'Standard Room')
-        self.assertEqual(self.service_option.capacity, 2)
-        self.assertEqual(self.service_option.price, 200.00)
 
-class ReservationModelTest(TestCase):
+class ServiceOptionTestCase(unittest.TestCase):
     def setUp(self):
+        self.service = Service.objects.create(
+            name='Hotel Service',
+            location='Test Location',
+            type='Hotel',
+        )
+        self.service_option = ServiceOption(
+            service=self.service,
+            name='Room Option',
+            capacity=2,
+            price=100.0,
+            available_from=date.today(),
+            available_to=date.today() + timedelta(days=10),
+        )
+
+    def test_clean_valid_dates(self):
+        try:
+            self.service_option.clean()
+        except ValidationError:
+            self.fail("clean() raised ValidationError unexpectedly!")
+
+    def test_clean_invalid_dates(self):
+        self.service_option.available_from = date.today() + timedelta(days=5)
+        self.service_option.available_to = date.today()
+        with self.assertRaises(ValidationError):
+            self.service_option.clean()
+
+
+class ReservationTestCase(unittest.TestCase):
+    def setUp(self):
+        self.email = f'user{timezone.now().timestamp()}@example.com'
         self.user = User.objects.create_user(
-            email='reserver@example.com',
-            password='reservepassword',
-            first_name='Reserver',
+            email=self.email,
+            first_name='Test',
             last_name='User',
-            balance=500
+            password='password123'
         )
         self.service = Service.objects.create(
-            name='SPA Test',
-            type='SPA&WELLNESS',
-            location='Wellness Center'
+            name='Hotel Service',
+            location='Test Location',
+            type='Hotel',
+            available_from=date.today(),
+            available_to=date.today() + timedelta(days=10),
         )
-        self.service_option = ServiceOption.objects.create(
+        self.option = ServiceOption.objects.create(
             service=self.service,
-            name='Massage Package',
-            capacity=1,
-            price=150.00,
-            available_from=timezone.now(),
-            available_to=timezone.now() + timezone.timedelta(days=60)
+            name='Room Option',
+            capacity=2,
+            price=100.0,
         )
-        self.reservation = Reservation.objects.create(
+        self.reservation = Reservation(
             user=self.user,
-            option=self.service_option,
-            start_datetime=timezone.now() + timezone.timedelta(days=1),
-            end_datetime=timezone.now() + timezone.timedelta(days=2),
-            status='confirmed',
-            price=150.00
+            service=self.service,
+            option=self.option,
+            start_datetime=make_aware(datetime.now() + timedelta(days=1)),
+            end_datetime=make_aware(datetime.now() + timedelta(days=5)),
         )
 
-    def test_reservation_creation(self):
-        self.assertEqual(self.reservation.user, self.user)
-        self.assertEqual(self.reservation.option, self.service_option)
-        self.assertEqual(self.reservation.status, 'confirmed')
-        self.assertEqual(self.reservation.price, 150.00)
+    def test_clean_valid_dates(self):
+        try:
+            self.reservation.clean()
+        except ValidationError:
+            self.fail("clean() raised ValidationError unexpectedly!")
 
-class ReviewModelTest(TestCase):
+    def test_clean_start_date_in_past(self):
+        self.reservation.start_datetime = make_aware(datetime.now() - timedelta(days=1))
+        with self.assertRaises(ValidationError):
+            self.reservation.clean()
+
+    def test_clean_end_date_before_start_date(self):
+        self.reservation.end_datetime = self.reservation.start_datetime - timedelta(days=1)
+        with self.assertRaises(ValidationError):
+            self.reservation.clean()
+
+
+class ReviewTestCase(unittest.TestCase):
     def setUp(self):
+        self.email = f'user{timezone.now().timestamp()}@example.com'
         self.user = User.objects.create_user(
-            email='reviewer@example.com',
-            password='reviewerpass123',
+            email=self.email,
             first_name='Reviewer',
-            last_name='User'
+            last_name='User',
+            password='password123'
         )
         self.service = Service.objects.create(
-            name='Restaurant Test',
-            type='Restauracja',
-            location='Food Court'
+            name='Hotel Service',
+            location='Test Location',
+            type='Hotel',
+            available_from=date.today(),
+            available_to=date.today() + timedelta(days=10),
         )
-        self.review = Review.objects.create(
+        self.review = Review(
             user=self.user,
             service=self.service,
-            rating=5,
-            comment='Excellent service!'
+            comment='Great service!',
+            rating=5
         )
 
     def test_review_creation(self):
-        self.assertEqual(self.review.user, self.user)
-        self.assertEqual(self.review.service, self.service)
-        self.assertEqual(self.review.rating, 5)
-        self.assertEqual(self.review.comment, 'Excellent service!')
+        self.assertEqual(str(self.review), f"Opinia 5/5 od {self.email} dla Hotel Service")
 
-class MessageModelTest(TestCase):
+
+class MessageTestCase(unittest.TestCase):
     def setUp(self):
+        self.email = f'user{timezone.now().timestamp()}@example.com'
         self.user = User.objects.create_user(
-            email='messenger@example.com',
-            password='messagepassword',
-            first_name='Messenger',
-            last_name='User'
+            email=self.email,
+            first_name='Messager',
+            last_name='User',
+            password='password123'
         )
-        self.message = Message.objects.create(
+        self.message = Message(
             user=self.user,
-            subject='Test Subject',
-            content='This is a test message.',
-            sender='user'
+            subject='Test Message',
+            sender='admin',
+            content='This is a test message.'
         )
 
     def test_message_creation(self):
-        self.assertEqual(self.message.user, self.user)
-        self.assertEqual(self.message.subject, 'Test Subject')
+        self.assertEqual(self.message.subject, 'Test Message')
         self.assertEqual(self.message.content, 'This is a test message.')
-        self.assertEqual(self.message.sender, 'user')
-        self.assertFalse(self.message.is_read)
-        self.assertIsNone(self.message.response_date)
+
+class UserStrTestCase(unittest.TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='testuser@example.com',
+            first_name='Test',
+            last_name='User',
+            password='password123'
+        )
+
+    def test_user_str(self):
+        self.assertEqual(str(self.user), 'Test User')
+
+
+class ServiceMinPriceTestCase(unittest.TestCase):
+    def setUp(self):
+        self.service = Service.objects.create(
+            name='Hotel Service',
+            location='Test Location',
+            type='Hotel'
+        )
+
+    def test_get_min_price_no_options(self):
+        self.assertEqual(self.service.get_min_price(), 0)
+
+
+class ServiceOptionStrTestCase(unittest.TestCase):
+    def setUp(self):
+        self.service = Service.objects.create(
+            name='Hotel Service',
+            location='Test Location',
+            type='Hotel'
+        )
+        self.service_option = ServiceOption.objects.create(
+            service=self.service,
+            name='Luxury Room',
+            capacity=10,
+            price=1000.0
+        )
+
+    def test_service_option_str(self):
+        self.assertEqual(str(self.service_option), 'Luxury Room - 10 osób - 1000.0 zł')
+
+
+class MessageAutoLinkTestCase(unittest.TestCase):
+    def setUp(self):
+        unique_email = f'testuser{now().timestamp()}@example.com'
+        self.user = User.objects.create_user(
+            email=unique_email,
+            first_name='Test',
+            last_name='User',
+            password='password123'
+        )
+        self.reservation = Reservation.objects.create(
+            user=self.user,
+            service_name='Hotel Service',
+            start_datetime=make_aware(datetime.now() + timedelta(days=1)),
+            end_datetime=make_aware(datetime.now() + timedelta(days=5))
+        )
+        self.message = Message.objects.create(
+            user=self.user,
+            subject='Test Message',
+            sender='admin',
+            content='This is a test message.'
+        )
+
+    def test_auto_link_reservation(self):
+        self.message.save()
+        self.assertIn(self.reservation, self.message.reservations.all())
+
+
+class ReservationStatusTestCase(unittest.TestCase):
+    def setUp(self):
+        unique_email = f'testuser{now().timestamp()}@example.com'
+        self.user = User.objects.create_user(
+            email=unique_email,
+            first_name='Test',
+            last_name='User',
+            password='password123'
+        )
+        self.service = Service.objects.create(
+            name='Hotel Service',
+            location='Test Location',
+            type='Hotel'
+        )
+        self.option = ServiceOption.objects.create(
+            service=self.service,
+            name='Standard Room',
+            capacity=2,
+            price=100.0
+        )
+        self.reservation = Reservation.objects.create(
+            user=self.user,
+            service=self.service,
+            option=self.option,
+            start_datetime=make_aware(datetime.now() + timedelta(days=1)),
+            end_datetime=make_aware(datetime.now() + timedelta(days=5)),
+            status='pending'
+        )
+
+    def test_reservation_status_change(self):
+        self.reservation.status = 'confirmed'
+        self.reservation.save()
+        self.assertEqual(self.reservation.status, 'confirmed')
+
+
+class ReviewRatingValidationTestCase(unittest.TestCase):
+    def setUp(self):
+        unique_email = f'testuser{now().timestamp()}@example.com'
+        self.user = User.objects.create_user(
+            email=unique_email,
+            first_name='Reviewer',
+            last_name='User',
+            password='password123'
+        )
+        self.service = Service.objects.create(
+            name='Hotel Service',
+            location='Test Location',
+            type='Hotel'
+        )
+
+    def test_review_invalid_rating(self):
+        review = Review(
+            user=self.user,
+            service=self.service,
+            comment='Excellent service!',
+            rating=6
+        )
+        with self.assertRaises(ValidationError):
+            review.full_clean()
+
+
+class ServiceStatusTestCase(unittest.TestCase):
+    def setUp(self):
+        self.status = ServiceStatus.objects.create(
+            status='maintenance',
+            message='Service under maintenance',
+            next_available=make_aware(datetime.now() + timedelta(days=1))
+        )
+
+    def test_service_status_str(self):
+        self.assertEqual(str(self.status), f"Status: {self.status.get_status_display()} - {self.status.next_available}")
+
